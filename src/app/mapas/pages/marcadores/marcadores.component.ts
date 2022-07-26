@@ -58,7 +58,7 @@ export class MarcadoresComponent implements AfterViewInit {
   }
 
   createMarker(marcador?: MarcadorLocalStorage): void {
-    const esMarcadorNuevo = marcador == undefined;
+    const esMarcadorNuevo = marcador === undefined;
     const colorMarcador : string = esMarcadorNuevo ? this.generateRandomColor() : marcador!.color;
     const centroMarcador: [number, number] = esMarcadorNuevo ? this.center: [marcador!.longitud, marcador!.latitud];
 
@@ -73,6 +73,10 @@ export class MarcadoresComponent implements AfterViewInit {
       color: colorMarcador,
       marker: newMarker
     });
+
+    newMarker.on('dragend', () => {
+      this.guardarMarcadoresLocalStorage();
+    })
 
     if(esMarcadorNuevo)
       this.guardarMarcadoresLocalStorage();
@@ -109,6 +113,12 @@ export class MarcadoresComponent implements AfterViewInit {
 
       marcadoresLocalStorage.forEach( marcador => this.createMarker(marcador) );
     }
+  }
+
+  borrarMarcador( indice: number ) {
+    this.markerList[indice].marker.remove();
+    this.markerList.splice(indice, 1);
+    this.guardarMarcadoresLocalStorage();
   }
 
   generateRandomColor(): string {
