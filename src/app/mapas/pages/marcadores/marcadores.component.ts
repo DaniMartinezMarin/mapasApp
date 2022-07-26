@@ -1,9 +1,15 @@
-import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, ViewChild } from '@angular/core';
 import * as mapboxgl from 'mapbox-gl';
 
 interface MarcadorPersonalizado {
   color: string;
   marker: mapboxgl.Marker;
+}
+
+interface MarcadorLocalStorage {
+  color: string;
+  latitud: number;
+  longitud: number;
 }
 
 @Component({
@@ -29,7 +35,7 @@ interface MarcadorPersonalizado {
     `
   ]
 })
-export class MarcadoresComponent implements  AfterViewInit {
+export class MarcadoresComponent implements AfterViewInit {
 
   @ViewChild('mapa') divMapa!: ElementRef;
   mapa!: mapboxgl.Map;
@@ -48,9 +54,10 @@ export class MarcadoresComponent implements  AfterViewInit {
       zoom: this.zoomMapa
     });
 
+    this.getMarkersFromLocalStorage();
   }
 
-  createMarker( ): void {
+  createMarker(): void {
 
     const randomColor = this.generateRandomColor();
     const newMarker = new mapboxgl.Marker({
@@ -58,24 +65,68 @@ export class MarcadoresComponent implements  AfterViewInit {
       color: randomColor
     })
       .setLngLat(this.center)
-      .addTo(this.mapa);
+      .addTo(this.mapa)
 
     this.markerList.push({
       color: randomColor,
       marker: newMarker
     });
+
+    this.guardarMarcadoresLocalStorage();
   }
 
-  goToMarker(markerIndex: number) {
+  goToMarker(marker: mapboxgl.Marker) {
+    const coordinates = marker.getLngLat();
+    this.mapa.flyTo({
+      center: coordinates,
+      zoom: 15
+    });
+  }
 
-    const coordinates = this.markerList[markerIndex].marker.getLngLat();
-    this.mapa.panTo(coordinates);
+  guardarMarcadoresLocalStorage() {
+
+    const marcadorLocalStorage: MarcadorLocalStorage[] = this.markerList
+      .map( (marcadorPersonalizado) => {
+        return {
+          color: marcadorPersonalizado.color,
+          latitud: marcadorPersonalizado.marker.getLngLat().lat,
+          longitud: marcadorPersonalizado.marker.getLngLat().lng
+        }
+      } );
+
+    localStorage.setItem('marcadores',  JSON.stringify(marcadorLocalStorage));
+  }
+
+  getMarkersFromLocalStorage() {
+
+    const marcadoresItem = localStorage.getItem('marcadores');
+    if(marcadoresItem !== null)
+    {
+      const marcadoresLocalStorage: MarcadorLocalStorage[] = JSON.parse(marcadoresItem);
+
+      marcadoresLocalStorage.forEach( marcador => {
+        this.createMarkerFromLocalStorage(marcador.color, marcador.longitud, marcador.latitud);
+      } );
+    }
+  }
+
+  createMarkerFromLocalStorage( color: string, longitud: number, latitud: number ): void {
+
+    const newMarker = new mapboxgl.Marker({
+      draggable: true,
+      color
+    })
+      .setLngLat([longitud, latitud])
+      .addTo(this.mapa)
+
+    this.markerList.push({
+      color,
+      marker: newMarker
+    });
   }
 
   generateRandomColor(): string {
     return "#xxxxxx".replace(/x/g, y=>(Math.random()*16|0).toString(16));
   }
-
-
 
 }
